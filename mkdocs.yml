@@ -14,6 +14,7 @@ theme:
 
 nav:
   - Home: index.md
+  - Test Connection: test.md
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -21,3 +22,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+
+extra_javascript:
+  - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js
+
+strict: false

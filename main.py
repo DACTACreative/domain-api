@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import requests
 import os
@@ -12,6 +13,15 @@ logging.basicConfig(
 )
 
 app = FastAPI(title="Domain API", description="API for interacting with Domain real estate data")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://dactacreative.github.io"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Load environment variables
 load_dotenv()
