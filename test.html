@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
     <title>Domain API Test</title>
     <style>
         body {
@@ -9,52 +8,91 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f5f5f5;
         }
-        h1, h2 {
-            color: #333;
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #3498db;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 0;
+        }
+        .connection-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin-bottom: 30px;
+        }
+        .connection-info {
+            margin: 15px 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        .connection-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
         }
         button, input[type="submit"] {
-            background-color: #4CAF50;
+            background-color: #3498db;
             color: white;
             padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             margin: 5px 0;
+            transition: background-color 0.3s;
         }
         button:hover, input[type="submit"]:hover {
-            background-color: #45a049;
+            background-color: #2980b9;
         }
         button:disabled, input[type="submit"]:disabled {
-            background-color: #cccccc;
+            background-color: #bdc3c7;
             cursor: not-allowed;
         }
         input[type="text"], input[type="date"] {
-            padding: 8px;
+            padding: 8px 12px;
             margin: 5px 10px 5px 0;
-            border: 1px solid #ccc;
+            border: 1px solid #ddd;
             border-radius: 4px;
             width: 200px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus, input[type="date"]:focus {
+            border-color: #3498db;
+            outline: none;
         }
         .result {
             margin: 20px 0;
-            padding: 10px;
+            padding: 15px;
             border: 1px solid #ddd;
             border-radius: 4px;
             white-space: pre-wrap;
         }
         .success {
-            border-color: #4CAF50;
-            background-color: #f0fff0;
+            border-color: #2ecc71;
+            background-color: #f0fff4;
+            color: #27ae60;
         }
         .error {
-            border-color: #f44336;
-            background-color: #fff0f0;
+            border-color: #e74c3c;
+            background-color: #fff5f5;
+            color: #c0392b;
         }
         .filters {
             display: flex;
             align-items: center;
             margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         .listing-container {
             height: 600px;
@@ -62,16 +100,24 @@
             border: 1px solid #eee;
             border-radius: 4px;
             padding: 10px;
+            background: white;
         }
         .listing {
             margin: 10px 0;
-            padding: 10px;
-            border: 1px solid #ddd;
+            padding: 15px;
+            border: 1px solid #e1e1e1;
             border-radius: 4px;
+            transition: transform 0.2s;
+            background: white;
+        }
+        .listing:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
         }
         .search-section {
             opacity: 0.5;
             pointer-events: none;
+            transition: opacity 0.3s;
         }
         .search-section.enabled {
             opacity: 1;
@@ -80,25 +126,35 @@
     </style>
 </head>
 <body>
-    <h1>Domain API Test</h1>
-    
-    <div>
-        <h2>Test API Connection</h2>
-        <button onclick="testConnection()">Test Connection</button>
-        <div id="connectionResult" class="result"></div>
-    </div>
-    
-    <div id="searchSection" class="search-section" style="margin-top: 40px;">
-        <h2>Search Listings by Suburb</h2>
-        <form onsubmit="searchListings(event)">
-            <div class="filters">
-                <input type="text" id="suburb" placeholder="Enter suburb name" required>
-                <input type="date" id="dateFrom" title="List from date">
-                <input type="date" id="dateTo" title="List to date">
-                <input type="submit" value="Search">
+    <div class="container">
+        <h1>Domain API Test</h1>
+        
+        <div class="connection-section">
+            <h2>Test API Connection</h2>
+            <div class="connection-info">
+                <p>Click the button below to test the connection to the Domain API. This will verify:</p>
+                <ul>
+                    <li>API credentials are valid</li>
+                    <li>Authentication is successful</li>
+                    <li>Can fetch data from Domain API</li>
+                </ul>
             </div>
-        </form>
-        <div id="listingsResult" class="result"></div>
+            <button onclick="testConnection()">Test Connection</button>
+            <div id="connectionResult" class="result"></div>
+        </div>
+        
+        <div id="searchSection" class="search-section">
+            <h2>Search Listings by Suburb</h2>
+            <form onsubmit="searchListings(event)">
+                <div class="filters">
+                    <input type="text" id="suburb" placeholder="Enter suburb name" required>
+                    <input type="date" id="dateFrom" title="List from date">
+                    <input type="date" id="dateTo" title="List to date">
+                    <input type="submit" value="Search">
+                </div>
+            </form>
+            <div id="listingsResult"></div>
+        </div>
     </div>
 
     <script>
@@ -140,6 +196,11 @@
         }
 
         async function searchListings(event, page = 1) {
+            if (!connectionStatus) {
+                alert('Please test the API connection first');
+                return;
+            }
+
             event?.preventDefault();
             const suburb = document.getElementById('suburb').value;
             const dateFrom = document.getElementById('dateFrom').value;
@@ -173,6 +234,12 @@
                 if (data.success) {
                     if (page === 1) container.innerHTML = '';
                     
+                    if (data.data.length === 0) {
+                        container.innerHTML = '<div class="listing">No listings found for the specified criteria</div>';
+                        hasMoreResults = false;
+                        return;
+                    }
+
                     const listings = data.data.map(item => `
                         <div class="listing">
                             <h3>${item.listing.propertyDetails.displayableAddress}</h3>
@@ -187,22 +254,23 @@
                     container.insertAdjacentHTML('beforeend', listings);
                     hasMoreResults = data.data.length === 10;
                 } else {
-                    if (page === 1) container.textContent = 'Error: ' + data.error;
+                    if (page === 1) container.innerHTML = '<div class="listing error">Error: ' + data.error + '</div>';
                 }
             } catch (error) {
-                if (page === 1) container.textContent = 'Error: ' + error.message;
+                if (page === 1) container.innerHTML = '<div class="listing error">Error: ' + error.message + '</div>';
             } finally {
                 isLoading = false;
             }
         }
 
-        // Add scroll event listener for infinite scrolling
         document.addEventListener('DOMContentLoaded', () => {
             const resultDiv = document.getElementById('listingsResult');
-            resultDiv.addEventListener('scroll', () => {
+            resultDiv.innerHTML = '<div class="listing-container"></div>';
+            const container = resultDiv.querySelector('.listing-container');
+
+            container.addEventListener('scroll', () => {
                 if (!hasMoreResults || isLoading) return;
                 
-                const container = resultDiv.querySelector('.listing-container');
                 if (container.scrollHeight - container.scrollTop <= container.clientHeight + 100) {
                     currentPage++;
                     searchListings(null, currentPage);
