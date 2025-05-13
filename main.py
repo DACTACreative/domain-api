@@ -31,7 +31,11 @@ app.mount("/", StaticFiles(directory="static"), name="static")
 
 # Serve the test page at root URL
 @app.get("/")
-async def serve_test_page():
+async def home():
+    return FileResponse('static/index.html', media_type='text/html')
+
+@app.get("/test")
+async def test_page():
     return FileResponse('static/test.html', media_type='text/html')
 
 # Load environment variables
