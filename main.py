@@ -133,10 +133,7 @@ from typing import Optional
 @app.get("/search-listings/{suburb}")
 async def search_listings(
     suburb: str,
-    page: int = 1,
-    pageSize: int = 10,
-    dateFrom: Optional[str] = None,
-    dateTo: Optional[str] = None
+    pageSize: int = 100  # Increased to get more records per page
 ):
     try:
         # Get access token
@@ -147,43 +144,64 @@ async def search_listings(
             logging.error("Missing Domain API key")
             return {"error": "API key not configured"}
         
-        # Convert date strings to proper format if provided
-        search_json = {
-            "listingType": "Sale",
-            "propertyTypes": ["House"],
-            "locations": [{"suburb": suburb, "state": "VIC"}],
-            "page": page,
-            "pageSize": min(pageSize, 20),  # Limit page size to 20
-            "sort": {"sortKey": "DateListed", "direction": "Descending"}
-        }
-
-        if dateFrom:
-            try:
-                date_from = datetime.strptime(dateFrom, "%Y-%m-%d").strftime("%Y-%m-%d")
-                search_json["dateFrom"] = date_from
-            except ValueError:
-                return {"error": "Invalid dateFrom format. Use YYYY-MM-DD"}
-
-        if dateTo:
-            try:
-                date_to = datetime.strptime(dateTo, "%Y-%m-%d").strftime("%Y-%m-%d")
-                search_json["dateTo"] = date_to
-            except ValueError:
-                return {"error": "Invalid dateTo format. Use YYYY-MM-DD"}
-
-        response = requests.post(
-            f"{DOMAIN_API_URL}/listings/residential/_search",
-            headers={
-                "Authorization": f"Bearer {access_token}",
-                "X-Api-Key": api_key,
-                "Accept": "application/json",
-                "Content-Type": "application/json"
-            },
-            json=search_json
-        )
-        response.raise_for_status()
+        all_listings = []
+        current_page = 1
+        total_pages = 1  # Will be updated after first request
         
-        return {"success": True, "data": response.json()}
+        while current_page <= total_pages:
+            search_json = {
+                "listingType": "Sale",
+                "propertyTypes": ["House", "NewApartments", "ApartmentUnitFlat", "Townhouse", "Villa"],  # Get all types
+                "locations": [{"suburb": suburb, "state": "VIC"}],
+                "page": current_page,
+                "pageSize": pageSize,
+                "sort": {"sortKey": "DateListed", "direction": "Descending"}
+            }
+
+            response = requests.post(
+                f"{DOMAIN_API_URL}/listings/residential/_search",
+                headers={
+                    "Authorization": f"Bearer {access_token}",
+                    "X-Api-Key": api_key,
+                    "Accept": "application/json",
+                    "Content-Type": "application/json"
+                },
+                json=search_json
+            )
+            response.raise_for_status()
+            
+            data = response.json()
+            if not data:  # No more results
+                break
+                
+            all_listings.extend(data)
+            
+            # Update total pages based on results
+            if current_page == 1:
+                # Estimate total pages based on API limit of 1000 results
+                total_pages = min(10, (1000 + pageSize - 1) // pageSize)
+                
+            current_page += 1
+            
+            # Break if we hit the API limit
+            if len(all_listings) >= 1000:
+                break
+
+        # Extract available fields from first listing (if any)
+        available_fields = []
+        if all_listings and len(all_listings) > 0:
+            first_listing = all_listings[0].get('listing', {})
+            available_fields = [
+                {"field": field, "type": str(type(value).__name__)} 
+                for field, value in first_listing.items()
+            ]
+        
+        return {
+            "success": True, 
+            "total_listings": len(all_listings),
+            "available_fields": available_fields,
+            "data": all_listings[:3]  # Only return first 3 listings as example
+        }
             
     except requests.exceptions.RequestException as e:
         error_msg = f"Domain API error: {str(e)}"
