@@ -215,21 +215,15 @@ async def search_listings(
             if all_listings:
                 first_listing = all_listings[0]['listing']
                 headers = [
-                    'id',
-                    'address',
-                    'price',
-                    'bedrooms',
-                    'bathrooms',
-                    'carspaces',
-                    'property_type',
-                    'agency_name',
-                    'agency_id',
-                    'agent_names',  # Multiple agents possible
-                    'date_listed',
-                    'description',
-                    'features',
-                    'land_area',
-                    'url'
+                    'Price',
+                    'Address',
+                    'Agent Names',
+                    'Agency',
+                    'Bedrooms',
+                    'Bathrooms',
+                    'Car Spaces',
+                    'Land Size',
+                    'URL'
                 ]
                 writer.writerow(headers)
                 
@@ -241,20 +235,14 @@ async def search_listings(
                     advertiser = listing.get('advertiser', {})
                     
                     row = [
-                        listing.get('id', ''),
-                        property_details.get('displayableAddress', ''),
                         price_details.get('displayPrice', ''),
+                        property_details.get('displayableAddress', ''),
+                        '; '.join(c.get('name', '') for c in advertiser.get('contacts', [])),  # Agent names
+                        advertiser.get('name', ''),  # Agency name
                         property_details.get('bedrooms', ''),
                         property_details.get('bathrooms', ''),
                         property_details.get('carspaces', ''),
-                        property_details.get('propertyType', ''),
-                        advertiser.get('name', ''),  # Agency name
-                        advertiser.get('id', ''),    # Agency ID
-                        '; '.join(c.get('name', '') for c in advertiser.get('contacts', [])),  # Agent names
-                        listing.get('dateListed', ''),
-                        listing.get('summaryDescription', ''),
-                        '; '.join(property_details.get('features', [])),
-                        property_details.get('landArea', ''),
+                        f"{property_details.get('landArea', '')} {property_details.get('areaUnit', '')}".strip(),
                         f"https://www.domain.com.au/{listing.get('listingSlug', '')}"
                     ]
                     writer.writerow(row)
