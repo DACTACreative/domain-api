@@ -26,17 +26,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files directory
-app.mount("/", StaticFiles(directory="static"), name="static")
-
-# Serve the test page at root URL
 @app.get("/home")
 async def home():
-    return {"message": "HELLO WORLD"}
-
-@app.get("/test")
-async def test_page():
-    return FileResponse('static/test.html', media_type='text/html')
+    html_content = """<!DOCTYPE html>
+    <html>
+    <body>
+        <h1>HELLO WORLD</h1>
+    </body>
+    </html>"""
+    return HTMLResponse(content=html_content)
 
 # Load environment variables
 load_dotenv()
