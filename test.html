@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Domain API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+        }
+        .status {
+            font-size: 18px;
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .success { 
+            color: #155724;
+            background-color: #d4edda;
+        }
+        .error { 
+            color: #721c24;
+            background-color: #f8d7da;
+        }
+        .loading {
+            color: #0c5460;
+            background-color: #d1ecf1;
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Domain API Connection Test</h1>
+        <p>Click the button below to test the connection to the Domain API. This will verify:</p>
+        <ul>
+            <li>API credentials are valid</li>
+            <li>Authentication is successful</li>
+            <li>Can fetch data from Domain API</li>
+        </ul>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<div class="status loading">Testing connection to Domain API...</div>';
+
+            try {
+                const response = await fetch('http://localhost:8000/test-domain');
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="status success">✅ Connection successful!</div>
+                        <h3>Connection Details:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="status error">❌ Connection failed</div>
+                        <h3>Error Details:</h3>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="status error">❌ Connection Error</div>
+                    <h3>Error Details:</h3>
+                    <pre>${error.message}</pre>
+                    <p>Make sure the API server is running (uvicorn main:app --reload)</p>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

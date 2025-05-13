@@ -26,7 +26,7 @@ theme:
 
 nav:
   - Home: index.md
-  - Test Connection: test.md
+  - Test Connection: test.html
 
 markdown_extensions:
   - pymdownx.highlight:

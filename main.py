@@ -56,7 +56,7 @@ def get_domain_access_token():
         raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
 
 @app.get("/")
-async def root():
+def read_root():
     return {"message": "Welcome to Domain API"}
 
 @app.get("/health")
