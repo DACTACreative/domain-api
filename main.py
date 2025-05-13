@@ -30,9 +30,9 @@ app.add_middleware(
 app.mount("/", StaticFiles(directory="static"), name="static")
 
 # Serve the test page at root URL
-@app.get("/")
+@app.get("/home")
 async def home():
-    return FileResponse('static/index.html', media_type='text/html')
+    return {"message": "HELLO WORLD"}
 
 @app.get("/test")
 async def test_page():
