@@ -33,16 +33,50 @@ async def home():
     <head>
         <style>
             body { font-family: Arial, sans-serif; margin: 40px; }
-            button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+            button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-right: 10px; }
+            input { padding: 10px; font-size: 16px; margin-right: 10px; }
             #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
             .error { color: red; }
             .success { color: green; }
+            .tab { 
+                height: 400px; 
+                overflow-y: auto; 
+                margin-top: 20px; 
+                padding: 20px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+            }
+            .listing {
+                padding: 15px;
+                margin-bottom: 15px;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                background: #f9f9f9;
+            }
+            .listing h3 { margin: 0 0 10px 0; }
+            .listing img { max-width: 200px; margin-right: 15px; float: left; }
+            .listing .price { font-weight: bold; color: #2c5282; }
+            .listing .details { margin: 10px 0; }
+            .clear { clear: both; }
         </style>
     </head>
     <body>
-        <h1>Domain API Test</h1>
-        <button onclick="testAPI()">Test Domain API Connection</button>
-        <div id="result"></div>
+        <h1>Domain API Search</h1>
+        
+        <!-- Connection Test Section -->
+        <div style="margin-bottom: 30px;">
+            <button onclick="testAPI()">Test API Connection</button>
+            <div id="result"></div>
+        </div>
+
+        <!-- Search Section -->
+        <div>
+            <input type="text" id="suburb" placeholder="Enter suburb name" value="Castlemaine">
+            <button onclick="searchListings()">Search Listings</button>
+        </div>
+
+        <!-- Results Tab -->
+        <div id="listings" class="tab" style="display: none;"></div>
 
         <script>
         async function testAPI() {
@@ -60,6 +94,52 @@ async def home():
                 }
             } catch (error) {
                 resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+
+        async function searchListings() {
+            const suburb = document.getElementById('suburb').value;
+            const listingsDiv = document.getElementById('listings');
+            const resultDiv = document.getElementById('result');
+            
+            if (!suburb) {
+                resultDiv.innerHTML = '<div class="error">Please enter a suburb name</div>';
+                return;
+            }
+
+            resultDiv.innerHTML = 'Searching listings...';
+            listingsDiv.style.display = 'block';
+            listingsDiv.innerHTML = 'Loading...';
+            
+            try {
+                const response = await fetch(`/search-listings/${encodeURIComponent(suburb)}`);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    resultDiv.innerHTML = `<div class="success">Found ${data.data.length} listings</div>`;
+                    
+                    // Display listings
+                    listingsDiv.innerHTML = data.data.map(listing => `
+                        <div class="listing">
+                            <h3>${listing.listing.propertyDetails.displayableAddress}</h3>
+                            ${listing.listing.media.length ? `<img src="${listing.listing.media[0].url}" alt="Property">` : ''}
+                            <div class="price">${listing.listing.priceDetails.displayPrice}</div>
+                            <div class="details">
+                                ${listing.listing.propertyDetails.bedrooms} beds | 
+                                ${listing.listing.propertyDetails.bathrooms} baths | 
+                                ${listing.listing.propertyDetails.carspaces} cars
+                            </div>
+                            <div class="details">${listing.listing.summaryDescription}</div>
+                            <div class="clear"></div>
+                        </div>
+                    `).join('');
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error || 'No listings found'}</div>`;
+                    listingsDiv.style.display = 'none';
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+                listingsDiv.style.display = 'none';
             }
         }
         </script>
