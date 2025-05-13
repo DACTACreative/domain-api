@@ -88,7 +88,7 @@
             if (data.success) {
                 resultDiv.innerHTML = `<div class="success">
                     <h2>Found ${data.total_listings} total listings in ${suburb}</h2>
-                    <p><a href="${data.csv_path}" download>Download Full Data as CSV</a></p>
+                    <p><a href="${data.csv_url}" target="_blank">Download Full Data as CSV</a></p>
                     <p>CSV includes agency and agent information for each listing.</p>
                     <h3>Available Fields from Domain API:</h3>
                     <ul>

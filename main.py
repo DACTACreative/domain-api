@@ -26,6 +26,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Mount the data directory
+app.mount("/data", StaticFiles(directory="data"), name="data")
+
 @app.get("/home")
 async def home():
     with open('templates/home.html', 'r') as f:
@@ -201,7 +204,8 @@ async def search_listings(
             ]
         
         # Save to CSV
-        csv_path = Path(f'data/{suburb.lower()}_listings.csv')
+        filename = f'{suburb.lower()}_listings.csv'
+        csv_path = Path(f'data/{filename}')
         csv_path.parent.mkdir(exist_ok=True)
         
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
@@ -260,7 +264,7 @@ async def search_listings(
             "total_listings": len(all_listings),
             "available_fields": available_fields,
             "data": all_listings[:3],  # Only return first 3 listings as example
-            "csv_path": str(csv_path)
+            "csv_url": f"/data/{filename}"
         }
             
     except requests.exceptions.RequestException as e:
