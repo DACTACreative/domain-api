@@ -150,12 +150,13 @@ async def search_listings(
         
         while current_page <= total_pages:
             search_json = {
-                "listingType": "Sale",
-                "propertyTypes": ["House", "NewApartments", "ApartmentUnitFlat", "Townhouse", "Villa"],  # Get all types
-                "locations": [{"suburb": suburb, "state": "VIC"}],
+                "locations": [{
+                    "suburb": suburb,
+                    "state": "VIC",
+                    "postCode": "3450"
+                }],
                 "page": current_page,
-                "pageSize": pageSize,
-                "sort": {"sortKey": "DateListed", "direction": "Descending"}
+                "pageSize": pageSize
             }
 
             response = requests.post(
