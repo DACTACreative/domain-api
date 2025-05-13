@@ -15,6 +15,10 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
+# Create data directory if it doesn't exist
+data_dir = Path("data")
+data_dir.mkdir(exist_ok=True)
+
 app = FastAPI(title="Domain API", description="API for interacting with Domain real estate data")
 
 # Configure CORS
@@ -27,7 +31,7 @@ app.add_middleware(
 )
 
 # Mount the data directory
-app.mount("/data", StaticFiles(directory="data"), name="data")
+app.mount("/data", StaticFiles(directory=str(data_dir)), name="data")
 
 @app.get("/home")
 async def home():
