@@ -1,16 +1,28 @@
 site_name: Domain API Documentation
 site_url: https://dactacreative.github.io/domain-api
 repo_url: https://github.com/DACTACreative/domain-api
+
 theme:
   name: material
   palette:
-    primary: blue
-    accent: orange
+    - scheme: default
+      primary: blue
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
   features:
     - navigation.instant
     - navigation.tracking
     - navigation.sections
     - navigation.expand
+    - navigation.top
 
 nav:
   - Home: index.md
@@ -22,8 +34,7 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
-
-extra_javascript:
-  - https://unpkg.com/tablesort@5.3.0/dist/tablesort.min.js
+  - attr_list
+  - md_in_html
 
 strict: false
