@@ -30,10 +30,9 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Serve the test page at root URL
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def serve_test_page():
-    with open("static/test.html", "r") as f:
-        return f.read()
+    return FileResponse('static/test.html')
 
 # Load environment variables
 load_dotenv()
