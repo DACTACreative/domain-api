@@ -81,7 +81,9 @@
             resultDiv.innerHTML = '<div class="status loading">Testing connection to Domain API...</div>';
 
             try {
-                const response = await fetch('/test-domain');
+                const response = await fetch('https://domain-api.onrender.com/test-domain', {
+                    mode: 'cors'
+                });
                 const data = await response.json();
                 
                 if (data.success) {
