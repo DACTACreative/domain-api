@@ -1,4 +1,111 @@
 <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Domain API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            white-space: pre-wrap;
+        }
+        button, input[type="submit"] {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover, input[type="submit"]:hover {
+            background-color: #45a049;
+        }
+        input[type="text"] {
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .listing {
+            margin: 10px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Domain API Test</h1>
+    
+    <div>
+        <h2>Test API Connection</h2>
+        <button onclick="testConnection()">Test Connection</button>
+        <div id="connectionResult" class="result"></div>
+    </div>
+
+    <div style="margin-top: 40px;">
+        <h2>Search Listings by Suburb</h2>
+        <form onsubmit="searchListings(event)">
+            <input type="text" id="suburb" placeholder="Enter suburb name" required>
+            <input type="submit" value="Search">
+        </form>
+        <div id="listingsResult" class="result"></div>
+    </div>
+
+    <script>
+        async function testConnection() {
+            const resultDiv = document.getElementById('connectionResult');
+            resultDiv.textContent = 'Testing connection...';
+            
+            try {
+                const response = await fetch('http://localhost:8000/test-domain');
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function searchListings(event) {
+            event.preventDefault();
+            const suburb = document.getElementById('suburb').value;
+            const resultDiv = document.getElementById('listingsResult');
+            resultDiv.textContent = 'Searching...';
+            
+            try {
+                const response = await fetch(`http://localhost:8000/search-listings/${suburb}`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = data.data.map(item => `
+                        <div class="listing">
+                            <h3>${item.listing.propertyDetails.displayableAddress}</h3>
+                            <p>Price: ${item.listing.priceDetails.displayPrice}</p>
+                            <p>${item.listing.propertyDetails.bedrooms} beds, 
+                               ${item.listing.propertyDetails.bathrooms} baths, 
+                               ${item.listing.propertyDetails.carspaces} cars</p>
+                        </div>
+                    `).join('');
+                } else {
+                    resultDiv.textContent = 'Error: ' + data.error;
+                }
+            } catch (error) {
+                resultDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
 <html>
 <head>
     <title>Domain API Test</title>
