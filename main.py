@@ -255,7 +255,7 @@ async def search_listings(
             "success": True, 
             "total_listings": len(all_listings),
             "available_fields": available_fields,
-            "data": all_listings[:3],  # Only return first 3 listings as example
+            "data": all_listings,  # Return all listings
             "csv_url": f"/data/{filename}"
         }
             

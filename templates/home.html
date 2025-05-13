@@ -96,10 +96,10 @@
                             `<li>${field.field}: ${field.type}</li>`
                         ).join('')}
                     </ul>
-                    <p>Showing first 3 listings as example:</p>
+                    <p>All listings:</p>
                 </div>`;
                 
-                // Display example listings
+                // Display all listings
                 if (data.data && data.data.length > 0) {
                     listingsDiv.innerHTML = data.data.map(listing => `
                         <div class="listing">
