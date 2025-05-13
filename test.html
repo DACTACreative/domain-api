@@ -68,7 +68,7 @@
             resultDiv.textContent = 'Testing connection...';
             
             try {
-                const response = await fetch('http://localhost:8000/test-domain');
+                const response = await fetch('https://dactacreative.github.io/domain-api/test-domain');
                 const data = await response.json();
                 resultDiv.textContent = JSON.stringify(data, null, 2);
             } catch (error) {
@@ -83,7 +83,7 @@
             resultDiv.textContent = 'Searching...';
             
             try {
-                const response = await fetch(`http://localhost:8000/search-listings/${suburb}`);
+                const response = await fetch(`https://dactacreative.github.io/domain-api/search-listings/${suburb}`);
                 const data = await response.json();
                 
                 if (data.success) {
