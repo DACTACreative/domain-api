@@ -128,6 +128,9 @@ async def test_domain_api():
         return {"error": error_msg}
 
 from datetime import datetime
+import csv
+import json
+from pathlib import Path
 from typing import Optional
 
 @app.get("/search-listings/{suburb}")
@@ -197,11 +200,67 @@ async def search_listings(
                 for field, value in first_listing.items()
             ]
         
+        # Save to CSV
+        csv_path = Path(f'data/{suburb.lower()}_listings.csv')
+        csv_path.parent.mkdir(exist_ok=True)
+        
+        with open(csv_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            
+            # Write headers
+            if all_listings:
+                first_listing = all_listings[0]['listing']
+                headers = [
+                    'id',
+                    'address',
+                    'price',
+                    'bedrooms',
+                    'bathrooms',
+                    'carspaces',
+                    'property_type',
+                    'agency_name',
+                    'agency_id',
+                    'agent_names',  # Multiple agents possible
+                    'date_listed',
+                    'description',
+                    'features',
+                    'land_area',
+                    'url'
+                ]
+                writer.writerow(headers)
+                
+                # Write data
+                for item in all_listings:
+                    listing = item['listing']
+                    property_details = listing.get('propertyDetails', {})
+                    price_details = listing.get('priceDetails', {})
+                    advertiser = listing.get('advertiser', {})
+                    
+                    row = [
+                        listing.get('id', ''),
+                        property_details.get('displayableAddress', ''),
+                        price_details.get('displayPrice', ''),
+                        property_details.get('bedrooms', ''),
+                        property_details.get('bathrooms', ''),
+                        property_details.get('carspaces', ''),
+                        property_details.get('propertyType', ''),
+                        advertiser.get('name', ''),  # Agency name
+                        advertiser.get('id', ''),    # Agency ID
+                        '; '.join(c.get('name', '') for c in advertiser.get('contacts', [])),  # Agent names
+                        listing.get('dateListed', ''),
+                        listing.get('summaryDescription', ''),
+                        '; '.join(property_details.get('features', [])),
+                        property_details.get('landArea', ''),
+                        f"https://www.domain.com.au/{listing.get('listingSlug', '')}"
+                    ]
+                    writer.writerow(row)
+        
         return {
             "success": True, 
             "total_listings": len(all_listings),
             "available_fields": available_fields,
-            "data": all_listings[:3]  # Only return first 3 listings as example
+            "data": all_listings[:3],  # Only return first 3 listings as example
+            "csv_path": str(csv_path)
         }
             
     except requests.exceptions.RequestException as e:
