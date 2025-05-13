@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse, FileResponse
 from pydantic import BaseModel
 import requests
 import os
@@ -23,6 +25,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Serve the test page at root URL
+@app.get("/", response_class=HTMLResponse)
+async def serve_test_page():
+    with open("static/test.html", "r") as f:
+        return f.read()
 
 # Load environment variables
 load_dotenv()
