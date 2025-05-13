@@ -13,7 +13,21 @@
 - Use GitHub's web interface for quick edits
 - For larger changes, use GitHub Codespaces
 
-### 2. Deployment
+### 2. Code Organization
+- Keep HTML templates separate from Python code
+- Store templates in a dedicated `templates` directory
+- Keep Python files focused on logic, not presentation
+- Follow this structure:
+  ```
+  domain_api/
+  ├── main.py           # Main application logic
+  ├── templates/        # HTML templates
+  │   └── home.html     # Home page template
+  ├── static/          # Static assets (CSS, JS)
+  └── requirements.txt  # Dependencies
+  ```
+
+### 3. Deployment
 - Frontend (Test Page):
   - Automatically deployed to GitHub Pages
   - URL: https://dactacreative.github.io/domain-api/test.html
