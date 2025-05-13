@@ -30,8 +30,39 @@ app.add_middleware(
 async def home():
     html_content = """<!DOCTYPE html>
     <html>
+    <head>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+            #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
+            .error { color: red; }
+            .success { color: green; }
+        </style>
+    </head>
     <body>
-        <h1>HELLO WORLD</h1>
+        <h1>Domain API Test</h1>
+        <button onclick="testAPI()">Test Domain API Connection</button>
+        <div id="result"></div>
+
+        <script>
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = 'Testing connection...';
+            
+            try {
+                const response = await fetch('/test-domain');
+                const data = await response.json();
+                
+                if (data.success) {
+                    resultDiv.innerHTML = '<div class="success">✅ Connection successful!</div>';
+                } else {
+                    resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error}</div>`;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+            }
+        }
+        </script>
     </body>
     </html>"""
     return HTMLResponse(content=html_content)
