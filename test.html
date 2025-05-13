@@ -84,7 +84,7 @@
             resultDiv.textContent = 'Testing connection...';
             
             try {
-                const response = await fetch('https://dactacreative.github.io/domain-api/test-domain');
+                const response = await fetch('https://domain-api-dacta.onrender.com/test-domain');
                 const data = await response.json();
                 resultDiv.textContent = JSON.stringify(data, null, 2);
             } catch (error) {
@@ -129,7 +129,7 @@
                     dateTo: formatDate(dateTo)
                 });
 
-                const response = await fetch(`https://dactacreative.github.io/domain-api/search-listings/${suburb}?${params}`);
+                const response = await fetch(`https://domain-api-dacta.onrender.com/search-listings/${suburb}?${params}`);
                 const data = await response.json();
                 
                 if (data.success) {
