@@ -232,18 +232,28 @@ async def search_listings(suburb: str, pageSize: int = 100):
             response.raise_for_status()
             
             response_data = response.json()
+            logging.info(f"API Response Data: {response_data}")
             if not response_data:  # No more results
                 break
                 
             all_listings.extend(response_data.get('data', []))
 
             # Save listings to database
-            for item in response_data.get('data', []):
+            listings_data = response_data if isinstance(response_data, list) else response_data.get('data', [])
+            for item in listings_data:
                 try:
-                    listing = item.get('listing', {})
+                    # Debug log
+                    logging.info(f"Processing item: {item}")
+                    
+                    # Handle both direct listing and nested listing structure
+                    listing = item if isinstance(item, dict) else item.get('listing', {})
+                    if not listing:
+                        logging.error(f"Invalid listing data: {item}")
+                        continue
+                        
                     save_listing_to_db(listing)
                 except Exception as e:
-                    logging.error(f"Error saving listing {listing.get('id')}: {str(e)}")
+                    logging.error(f"Error saving listing: {str(e)}\nListing data: {item}")
             
             # Update total pages based on results
             if current_page == 1:
@@ -275,7 +285,10 @@ async def search_listings(suburb: str, pageSize: int = 100):
             
             # Write headers
             if all_listings:
-                first_listing = all_listings[0]['listing']
+                # Get first listing to determine structure
+                first_item = all_listings[0]
+                first_listing = first_item if isinstance(first_item, dict) else first_item.get('listing', {})
+                
                 headers = [
                     'Price',
                     'Address',
@@ -291,7 +304,12 @@ async def search_listings(suburb: str, pageSize: int = 100):
                 
                 # Write data
                 for item in all_listings:
-                    listing = item['listing']
+                    # Handle both direct listing and nested listing structure
+                    listing = item if isinstance(item, dict) else item.get('listing', {})
+                    if not listing:
+                        logging.error(f"Invalid listing data for CSV: {item}")
+                        continue
+                        
                     property_details = listing.get('propertyDetails', {})
                     price_details = listing.get('priceDetails', {})
                     advertiser = listing.get('advertiser', {})
