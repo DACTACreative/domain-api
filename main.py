@@ -45,7 +45,7 @@ async def home():
         html_content = f.read()
     return HTMLResponse(content=html_content)
 
-@app.get('/database-viewer')
+@app.get('/databaseviewer')
 async def database_viewer():
     """Show database viewer page"""
     with open('templates/database.html', 'r') as f:
