@@ -1,19 +1,25 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+from pathlib import Path
 from sqlalchemy import text
 from pydantic import BaseModel
 import requests
 import os
 import logging
 import base64
+import json
 from dotenv import load_dotenv
 from db_operations import save_listing_to_db, get_listings_by_suburb
 from database import engine
 from pathlib import Path
 import csv
 from datetime import datetime
+
+# Set logging to show full response
+logging.basicConfig(level=logging.INFO, format='%(message)s')
 
 # Configure logging
 logging.basicConfig(
@@ -36,14 +42,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Configure templates
+templates = Jinja2Templates(directory="templates")
+
 # Mount the data directory
 app.mount("/data", StaticFiles(directory=str(data_dir)), name="data")
 
-@app.get("/home")
-async def home():
-    with open('templates/home.html', 'r') as f:
-        html_content = f.read()
-    return HTMLResponse(content=html_content)
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request):
+    try:
+        return templates.TemplateResponse("home.html", {"request": request})
+    except Exception as e:
+        logging.error(f"Error serving home page: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get('/databaseviewer')
 async def database_viewer():
@@ -145,9 +156,7 @@ def get_domain_access_token():
         logging.error(f"Error getting access token: {str(e)}")
         raise
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to Domain API"}
+
 
 @app.get("/health")
 async def health_check():
@@ -192,64 +201,41 @@ async def test_domain_api():
         logging.error(error_msg)
         return {"error": error_msg}
 
-@app.get("/api/search/{suburb}")
-async def search_listings(suburb: str, pageSize: int = 100):
+@app.get('/api/search-listings/{suburb}')
+async def search_listings(suburb: str):
+    """Search for listings in a given suburb and return raw API response"""
     try:
         # Get access token
         access_token = get_domain_access_token()
-        if not access_token:
-            return {"error": "Failed to get access token"}
         
-        api_key = access_token
-        
-        # Prepare search parameters
+        # Simple search parameters
         search_json = {
-            "listingType":"Sale",
-            "propertyTypes":[
-                "House", "NewApartments", "ApartmentUnitFlat", "Villa", "Land",
-                "Acreage", "NewLand", "NewHouseLand", "Duplex", "SemiDetached",
-                "Townhouse", "NewTownhouse", "NewDuplex", "Terrace", "ServicedApartment",
-                "Studio", "BlockOfUnits", "RetirementLiving"
-            ],
-            "locations":[
+            "listingType": "Sale",
+            "locations": [
                 {
-                    "state":"",
-                    "region":"",
-                    "area":"",
                     "suburb": suburb,
-                    "postCode":"",
-                    "includeSurroundingSuburbs":False
+                    "state": "VIC"
                 }
-            ],
-            "page": 1,
-            "pageSize": pageSize
+            ]
         }
         
         # Make API request
         response = requests.post(
             f"{DOMAIN_API_URL}/listings/residential/_search",
             headers={
-                "Authorization": f"Bearer {api_key}",
-                "X-Api-Key": api_key,
+                "Authorization": f"Bearer {access_token}",
                 "Accept": "application/json",
                 "Content-Type": "application/json"
             },
             json=search_json
         )
-        response.raise_for_status()
         
-        # Parse response
-        response_data = response.json()
-        listings = response_data.get('data', [])
-        logging.info(f"Found {len(listings)} listings for {suburb}")
+        # Return raw response
+        return response.json()
         
-        # Return listings without saving
-        return {
-            "success": True,
-            "message": f"Found {len(listings)} listings in {suburb}",
-            "suburb": suburb,
-            "listings": listings
-        }
+    except Exception as e:
+        logging.error(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
             
     except Exception as e:
         error_msg = f"Error: {str(e)}"
@@ -305,7 +291,10 @@ async def save_listings(request: Request):
                 continue
         
         # Save to CSV
-        filename = f'{suburb.lower()}_listings.csv'
+        if suburb:
+            filename = f'{suburb.lower()}_listings.csv'
+        else:
+            filename = f'listings_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
         csv_path = Path(f'data/{filename}')
         csv_path.parent.mkdir(exist_ok=True)
         

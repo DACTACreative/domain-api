@@ -1,214 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Domain API</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .step-box {
-            margin: 20px 0;
-            padding: 20px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            display: none;
-        }
-        input[type="text"] {
-            padding: 8px;
-            font-size: 16px;
-            width: 300px;
-            margin-right: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            padding: 8px 16px;
-            font-size: 16px;
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:disabled {
-            background-color: #ccc;
-        }
-        .success {
-            color: #28a745;
-        }
-        .error {
-            color: #dc3545;
-        }
-        .listings-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        .listings-table th, .listings-table td {
-            padding: 8px;
-            text-align: left;
-            border: 1px solid #ddd;
-        }
-        .listings-table th {
-            background-color: #f8f9fa;
-        }
-    </style>
+    <title>Domain API Test</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <div class="container">
-        <h1>Domain API</h1>
+    <div class="container mt-4">
+        <h1 class="text-center mb-4">Domain API Test</h1>
         
-        <div class="step-box">
-            <h2>Step 1: Search Suburb</h2>
-            <div>
-                <input type="text" id="suburb" placeholder="Enter suburb name" />
-                <button onclick="searchListings()">Search Listings</button>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="input-group mb-3">
+                    <input type="text" id="suburb" class="form-control" placeholder="Enter suburb name...">
+                    <button class="btn btn-primary" onclick="searchListings()">Search</button>
+                </div>
+                
+                <div id="error" class="alert alert-danger" style="display: none;"></div>
+                
+                <div id="results" class="mt-4">
+                    <!-- API results will be shown here -->
+                </div>
             </div>
         </div>
-
-        <div id="searchResult" class="result">
-            <h3>Search Results</h3>
-            <div id="searchDetails"></div>
-            <div id="listingsTable"></div>
-            <button id="saveButton" onclick="saveToDatabase()" style="display: none; margin-top: 15px;">Save to Database</button>
-        </div>
-
-        <div id="saveResult" class="result">
-            <h3>Database Results</h3>
-            <div id="saveDetails"></div>
-        </div>
-
-        <script>
-            let currentListings = null;
-
-            function displayListings(listings) {
-                const table = document.getElementById('listingsTable');
-                if (!listings || listings.length === 0) {
-                    table.innerHTML = '<p>No listings found</p>';
-                    return;
-                }
-
-                const html = `
-                    <table class="listings-table">
-                        <thead>
-                            <tr>
-                                <th>Address</th>
-                                <th>Price</th>
-                                <th>Beds</th>
-                                <th>Baths</th>
-                                <th>Cars</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${listings.map(listing => `
-                                <tr>
-                                    <td>${listing.propertyDetails?.displayableAddress || 'N/A'}</td>
-                                    <td>${listing.priceDetails?.displayPrice || 'N/A'}</td>
-                                    <td>${listing.propertyDetails?.bedrooms || 'N/A'}</td>
-                                    <td>${listing.propertyDetails?.bathrooms || 'N/A'}</td>
-                                    <td>${listing.propertyDetails?.carspaces || 'N/A'}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                `;
-                table.innerHTML = html;
-            }
-
-            async function searchListings() {
-                const suburb = document.getElementById('suburb').value;
-                const searchDetails = document.getElementById('searchDetails');
-                const searchResult = document.getElementById('searchResult');
-                const saveButton = document.getElementById('saveButton');
-                
-                if (!suburb) {
-                    alert('Please enter a suburb name');
-                    return;
-                }
-                
-                try {
-                    searchDetails.innerHTML = 'Searching...';
-                    searchResult.style.display = 'block';
-                    saveButton.style.display = 'none';
-                    
-                    const response = await fetch(`/api/search/${encodeURIComponent(suburb)}`);
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        searchDetails.innerHTML = `<p class="error">❌ Error: ${data.error}</p>`;
-                        displayListings([]);
-                    } else {
-                        currentListings = data.listings;
-                        searchDetails.innerHTML = `
-                            <p class="success">✓ Found ${data.listings.length} listings in ${suburb}</p>
-                            <p>Click 'Save to Database' to store these listings</p>
-                        `;
-                        displayListings(data.listings);
-                        saveButton.style.display = 'block';
-                    }
-                } catch (error) {
-                    searchDetails.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
-                    displayListings([]);
-                }
-            }
-
-            async function saveToDatabase() {
-                const saveDetails = document.getElementById('saveDetails');
-                const saveResult = document.getElementById('saveResult');
-                const saveButton = document.getElementById('saveButton');
-                
-                if (!currentListings) {
-                    alert('No listings to save');
-                    return;
-                }
-                
-                try {
-                    saveResult.style.display = 'block';
-                    saveDetails.innerHTML = 'Saving to database...';
-                    saveButton.disabled = true;
-                    
-                    const response = await fetch('/api/save-listings', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ listings: currentListings })
-                    });
-                    
-                    const data = await response.json();
-                    
-                    if (data.error) {
-                        saveDetails.innerHTML = `<p class="error">❌ Error: ${data.error}</p>`;
-                    } else {
-                        saveDetails.innerHTML = `
-                            <p class="success">✓ Successfully saved ${data.saved_count} listings to database</p>
-                            ${data.csv_url ? `<p><a href="${data.csv_url}" download>Download CSV</a></p>` : ''}
-                        `;
-                    }
-                } catch (error) {
-                    saveDetails.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
-                } finally {
-                    saveButton.disabled = false;
-                }
-            }
-        </script>
     </div>
+
+    <script>
+        async function searchListings() {
+            const suburb = document.getElementById('suburb').value;
+            const resultsDiv = document.getElementById('results');
+            const errorDiv = document.getElementById('error');
+            
+            if (!suburb) {
+                errorDiv.textContent = 'Please enter a suburb name';
+                errorDiv.style.display = 'block';
+                return;
+            }
+
+            try {
+                resultsDiv.innerHTML = '<div class="text-center">Loading...</div>';
+                errorDiv.style.display = 'none';
+                
+                const response = await fetch(`/api/search-listings/${encodeURIComponent(suburb)}`);
+                const data = await response.json();
+                
+                // Show raw API response
+                resultsDiv.innerHTML = `
+                    <h3>Raw API Response for "${suburb}"</h3>
+                    <pre class="bg-light p-3 rounded">${JSON.stringify(data, null, 2)}</pre>
+                `;
+                
+            } catch (error) {
+                errorDiv.textContent = 'Error: ' + error.message;
+                errorDiv.style.display = 'block';
+                resultsDiv.innerHTML = '';
+            }
+        }
+    </script>
 </body>
 </html>
