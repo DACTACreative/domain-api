@@ -238,8 +238,9 @@ async def search_listings(suburb: str, pageSize: int = 100):
             all_listings.extend(response_data.get('data', []))
 
             # Save listings to database
-            for listing in response_data.get('data', []):
+            for item in response_data.get('data', []):
                 try:
+                    listing = item.get('listing', {})
                     save_listing_to_db(listing)
                 except Exception as e:
                     logging.error(f"Error saving listing {listing.get('id')}: {str(e)}")
