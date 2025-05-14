@@ -1,12 +1,23 @@
 from sqlalchemy.orm import Session
-from database import SessionLocal
+from database import SessionLocal, engine
 from datetime import datetime
 import json
+import logging
 
 def save_listing_to_db(listing_data: dict):
-    """Save a listing and all related data to the database"""
+    """Save listing to database with duplicate checking"""
     db = SessionLocal()
     try:
+        # Check if listing already exists
+        existing_listing = db.execute(
+            text("SELECT id FROM listings WHERE domain_listing_id = :listing_id"),
+            {"listing_id": str(listing_data.get('id'))}
+        ).scalar()
+        
+        if existing_listing:
+            logging.info(f"Listing {listing_data.get('id')} already exists, skipping...")
+            return None
+            
         # Extract main listing data
         listing = {
             'domain_listing_id': str(listing_data.get('id')),
