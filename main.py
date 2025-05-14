@@ -194,86 +194,92 @@ async def test_domain_api():
 
 @app.get("/search-listings/{suburb}")
 async def search_listings(suburb: str, pageSize: int = 100):
-    """Search listings and save to database"""
     try:
         # Get access token
         access_token = get_domain_access_token()
-        api_key = "key_d05406abc5556a22176546f7283736ac"
+        if not access_token:
+            return {"error": "Failed to get access token"}
         
-        if not api_key:
-            logging.error("Missing Domain API key")
-            return {"error": "API key not configured"}
+        api_key = access_token
         
-        all_listings = []
+        # Initialize variables
         current_page = 1
-        total_pages = 1  # Will be updated after first request
+        all_listings = []
         
-        while current_page <= total_pages:
-            search_json = {
-                "locations": [{
+        # Prepare search parameters
+        search_json = {
+            "listingType":"Sale",
+            "propertyTypes":[
+                "House", "NewApartments", "ApartmentUnitFlat", "Villa", "Land",
+                "Acreage", "NewLand", "NewHouseLand", "Duplex", "SemiDetached",
+                "Townhouse", "NewTownhouse", "NewDuplex", "Terrace", "ServicedApartment",
+                "Studio", "BlockOfUnits", "RetirementLiving"
+            ],
+            "locations":[
+                {
+                    "state":"",
+                    "region":"",
+                    "area":"",
                     "suburb": suburb,
-                    "state": "VIC",
-                    "postCode": "3450"
-                }],
-                "page": current_page,
-                "pageSize": pageSize
-            }
-
-            response = requests.post(
-                f"{DOMAIN_API_URL}/listings/residential/_search",
-                headers={
-                    "Authorization": f"Bearer {access_token}",
-                    "X-Api-Key": api_key,
-                    "Accept": "application/json",
-                    "Content-Type": "application/json"
-                },
-                json=search_json
-            )
-            response.raise_for_status()
-            
-            response_data = response.json()
-            logging.info(f"API Response Data: {response_data}")
-            if not response_data:  # No more results
-                break
+                    "postCode":"",
+                    "includeSurroundingSuburbs":False
+                }
+            ],
+            "page": 1,
+            "pageSize": pageSize
+        }
+        # Make API request
+        response = requests.post(
+            f"{DOMAIN_API_URL}/listings/residential/_search",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "X-Api-Key": api_key,
+                "Accept": "application/json",
+                "Content-Type": "application/json"
+            },
+            json=search_json
+        )
+        response.raise_for_status()
+        
+        # Parse response
+        response_data = response.json()
+        listings = response_data.get('data', [])
+        logging.info(f"Found {len(listings)} listings for {suburb}")
+        
+        # Save each listing to database
+        saved_count = 0
+        for listing in listings:
+            try:
+                # Transform listing data to match expected structure
+                transformed_listing = {
+                    'id': listing.get('id'),
+                    'listingType': listing.get('type'),
+                    'status': listing.get('status'),
+                    'dateListed': listing.get('dateListed'),
+                    'dateUpdated': listing.get('dateUpdated'),
+                    'price': listing.get('priceDetails', {}).get('price'),
+                    'priceDetails': listing.get('priceDetails', {}),
+                    'headline': listing.get('headline'),
+                    'description': listing.get('description'),
+                    'listingSlug': listing.get('listingSlug'),
+                    'inspectionSchedule': listing.get('inspectionSchedule', []),
+                    'auctionDate': listing.get('auctionSchedule', {}).get('time'),
+                    'propertyTypes': [{'name': listing.get('propertyType')}],
+                    'propertyDetails': listing.get('propertyDetails', {}),
+                    'propertyFeatures': listing.get('features', []),
+                    'floorplans': listing.get('floorplans', []),
+                    'images': listing.get('media', []),
+                    'agents': listing.get('agents', []),
+                    'advertiser': listing.get('advertiser', {})
+                }
                 
-            all_listings.extend(response_data.get('data', []))
-
-            # Save listings to database
-            listings_data = response_data if isinstance(response_data, list) else response_data.get('data', [])
-            for item in listings_data:
-                try:
-                    # Debug log
-                    logging.info(f"Processing item: {item}")
-                    
-                    # Handle both direct listing and nested listing structure
-                    listing = item if isinstance(item, dict) else item.get('listing', {})
-                    if not listing:
-                        logging.error(f"Invalid listing data: {item}")
-                        continue
-                        
-                    save_listing_to_db(listing)
-                except Exception as e:
-                    logging.error(f"Error saving listing: {str(e)}\nListing data: {item}")
-            
-            # Update total pages based on results
-            if current_page == 1:
-                # Estimate total pages based on API limit of 1000 results
-                total_pages = min(10, (1000 + pageSize - 1) // pageSize)
-                
-            current_page += 1
-            
-            # Break if we hit the API limit
-            if len(all_listings) >= 1000:
-                break
-
-        # Extract available fields from first listing (if any)
-        available_fields = []
-        if all_listings and len(all_listings) > 0:
-            first_listing = all_listings[0].get('listing', {})
-            available_fields = [
-                {"field": field, "type": str(type(value).__name__)} 
-                for field, value in first_listing.items()
-            ]
+                listing_id = save_listing_to_db(transformed_listing)
+                if listing_id:
+                    saved_count += 1
+                    logging.info(f"Saved listing {listing_id} to database")
+            except Exception as e:
+                logging.error(f"Error saving listing: {str(e)}")
+                continue
         
         # Save to CSV
         filename = f'{suburb.lower()}_listings.csv'
@@ -282,58 +288,51 @@ async def search_listings(suburb: str, pageSize: int = 100):
         
         with open(csv_path, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
+            headers = [
+                'Price',
+                'Address',
+                'Agent Names',
+                'Agency',
+                'Bedrooms',
+                'Bathrooms',
+                'Car Spaces',
+                'Land Size',
+                'URL'
+            ]
+            writer.writerow(headers)
             
-            # Write headers
-            if all_listings:
-                # Get first listing to determine structure
-                first_item = all_listings[0]
-                first_listing = first_item if isinstance(first_item, dict) else first_item.get('listing', {})
+            # Write data
+            for listing in listings:
+                property_details = listing.get('propertyDetails', {})
+                price_details = listing.get('priceDetails', {})
+                advertiser = listing.get('advertiser', {})
                 
-                headers = [
-                    'Price',
-                    'Address',
-                    'Agent Names',
-                    'Agency',
-                    'Bedrooms',
-                    'Bathrooms',
-                    'Car Spaces',
-                    'Land Size',
-                    'URL'
+                row = [
+                    price_details.get('displayPrice', ''),
+                    property_details.get('displayableAddress', ''),
+                    '; '.join(c.get('name', '') for c in advertiser.get('contacts', [])),
+                    advertiser.get('name', ''),
+                    property_details.get('bedrooms', ''),
+                    property_details.get('bathrooms', ''),
+                    property_details.get('carspaces', ''),
+                    f"{property_details.get('landArea', '')} {property_details.get('areaUnit', '')}".strip(),
+                    f"https://www.domain.com.au/{listing.get('listingSlug', '')}"
                 ]
-                writer.writerow(headers)
-                
-                # Write data
-                for item in all_listings:
-                    # Handle both direct listing and nested listing structure
-                    listing = item if isinstance(item, dict) else item.get('listing', {})
-                    if not listing:
-                        logging.error(f"Invalid listing data for CSV: {item}")
-                        continue
-                        
-                    property_details = listing.get('propertyDetails', {})
-                    price_details = listing.get('priceDetails', {})
-                    advertiser = listing.get('advertiser', {})
-                    
-                    row = [
-                        price_details.get('displayPrice', ''),
-                        property_details.get('displayableAddress', ''),
-                        '; '.join(c.get('name', '') for c in advertiser.get('contacts', [])),  # Agent names
-                        advertiser.get('name', ''),  # Agency name
-                        property_details.get('bedrooms', ''),
-                        property_details.get('bathrooms', ''),
-                        property_details.get('carspaces', ''),
-                        f"{property_details.get('landArea', '')} {property_details.get('areaUnit', '')}".strip(),
-                        f"https://www.domain.com.au/{listing.get('listingSlug', '')}"
-                    ]
-                    writer.writerow(row)
+                writer.writerow(row)
         
+        # Return success response with counts
         return {
-            "success": True, 
-            "total_listings": len(all_listings),
-            "available_fields": available_fields,
-            "data": all_listings,  # Return all listings
+            "success": True,
+            "message": f"Found {len(listings)} listings, saved {saved_count} to database",
+            "total_listings": len(listings),
+            "saved_listings": saved_count,
             "csv_url": f"/data/{filename}"
         }
+            
+    except Exception as e:
+        error_msg = f"Error: {str(e)}"
+        logging.error(error_msg)
+        return {"error": error_msg}
             
     except requests.exceptions.RequestException as e:
         error_msg = f"Domain API error: {str(e)}"
