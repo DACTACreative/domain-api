@@ -1,130 +1,214 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Domain API</title>
     <style>
-        body { font-family: Arial, sans-serif; margin: 40px; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-right: 10px; }
-        input { padding: 10px; font-size: 16px; margin-right: 10px; }
-        #result { margin-top: 20px; padding: 10px; border: 1px solid #ccc; }
-        .error { color: red; }
-        .success { color: green; }
-        .tab { 
-            height: 400px; 
-            overflow-y: auto; 
-            margin-top: 20px; 
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
             padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            background-color: #f5f5f5;
         }
-        .listing {
-            padding: 15px;
-            margin-bottom: 15px;
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .step-box {
+            margin: 20px 0;
+            padding: 20px;
             border: 1px solid #ddd;
             border-radius: 4px;
-            background: #f9f9f9;
         }
-        .listing h3 { margin: 0 0 10px 0; }
-        .listing img { max-width: 200px; margin-right: 15px; float: left; }
-        .listing .price { font-weight: bold; color: #2c5282; }
-        .listing .details { margin: 10px 0; }
-        .clear { clear: both; }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        input[type="text"] {
+            padding: 8px;
+            font-size: 16px;
+            width: 300px;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+        }
+        .success {
+            color: #28a745;
+        }
+        .error {
+            color: #dc3545;
+        }
+        .listings-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .listings-table th, .listings-table td {
+            padding: 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+        }
+        .listings-table th {
+            background-color: #f8f9fa;
+        }
     </style>
 </head>
 <body>
-    <h1>Domain API Search</h1>
-    
-    <!-- Connection Test Section -->
-    <div style="margin-bottom: 30px;">
-        <button onclick="testAPI()">Test API Connection</button>
-        <div id="result"></div>
-    </div>
-
-    <!-- Search Section -->
-    <div>
-        <input type="text" id="suburb" placeholder="Enter suburb name" value="Castlemaine">
-        <button onclick="searchListings()">Search Listings</button>
-    </div>
-
-    <!-- Results Tab -->
-    <div id="listings" class="tab" style="display: none;"></div>
-
-    <script>
-    async function testAPI() {
-        const resultDiv = document.getElementById('result');
-        resultDiv.innerHTML = 'Testing connection...';
+    <div class="container">
+        <h1>Domain API</h1>
         
-        try {
-            const response = await fetch('/test-domain');
-            const data = await response.json();
-            
-            if (data.success) {
-                resultDiv.innerHTML = '<div class="success">✅ Connection successful!</div>';
-            } else {
-                resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error}</div>`;
-            }
-        } catch (error) {
-            resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
-        }
-    }
+        <div class="step-box">
+            <h2>Step 1: Search Suburb</h2>
+            <div>
+                <input type="text" id="suburb" placeholder="Enter suburb name" />
+                <button onclick="searchListings()">Search Listings</button>
+            </div>
+        </div>
 
-    async function searchListings() {
-        const suburb = document.getElementById('suburb').value;
-        const listingsDiv = document.getElementById('listings');
-        const resultDiv = document.getElementById('result');
-        
-        if (!suburb) {
-            resultDiv.innerHTML = '<div class="error">Please enter a suburb name</div>';
-            return;
-        }
+        <div id="searchResult" class="result">
+            <h3>Search Results</h3>
+            <div id="searchDetails"></div>
+            <div id="listingsTable"></div>
+            <button id="saveButton" onclick="saveToDatabase()" style="display: none; margin-top: 15px;">Save to Database</button>
+        </div>
 
-        resultDiv.innerHTML = 'Searching listings...';
-        listingsDiv.style.display = 'block';
-        listingsDiv.innerHTML = 'Loading...';
-        
-        try {
-            const response = await fetch(`/search-listings/${encodeURIComponent(suburb)}`);
-            const data = await response.json();
-            
-            if (data.success) {
-                resultDiv.innerHTML = `<div class="success">
-                    <h2>Found ${data.total_listings} total listings in ${suburb}</h2>
-                    <p><a href="${data.csv_url}" target="_blank">Download Full Data as CSV</a></p>
-                    <p>CSV includes agency and agent information for each listing.</p>
-                    <h3>Available Fields from Domain API:</h3>
-                    <ul>
-                        ${data.available_fields.map(field => 
-                            `<li>${field.field}: ${field.type}</li>`
-                        ).join('')}
-                    </ul>
-                    <p>All listings:</p>
-                </div>`;
-                
-                // Display all listings
-                if (data.data && data.data.length > 0) {
-                    listingsDiv.innerHTML = data.data.map(listing => `
-                        <div class="listing">
-                            <h3>${listing.listing.propertyDetails.displayableAddress}</h3>
-                            ${listing.listing.media.length ? `<img src="${listing.listing.media[0].url}" alt="Property">` : ''}
-                            <div class="price">${listing.listing.priceDetails.displayPrice}</div>
-                            <div class="details">
-                                ${listing.listing.propertyDetails.bedrooms} beds | 
-                                ${listing.listing.propertyDetails.bathrooms} baths | 
-                                ${listing.listing.propertyDetails.carspaces} cars
-                            </div>
-                            <div class="details">${listing.listing.summaryDescription}</div>
-                            <div class="clear"></div>
-                        </div>
-                    `).join('');
+        <div id="saveResult" class="result">
+            <h3>Database Results</h3>
+            <div id="saveDetails"></div>
+        </div>
+
+        <script>
+            let currentListings = null;
+
+            function displayListings(listings) {
+                const table = document.getElementById('listingsTable');
+                if (!listings || listings.length === 0) {
+                    table.innerHTML = '<p>No listings found</p>';
+                    return;
                 }
-            } else {
-                resultDiv.innerHTML = `<div class="error">❌ Error: ${data.error || 'No listings found'}</div>`;
-                listingsDiv.style.display = 'none';
+
+                const html = `
+                    <table class="listings-table">
+                        <thead>
+                            <tr>
+                                <th>Address</th>
+                                <th>Price</th>
+                                <th>Beds</th>
+                                <th>Baths</th>
+                                <th>Cars</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${listings.map(listing => `
+                                <tr>
+                                    <td>${listing.propertyDetails?.displayableAddress || 'N/A'}</td>
+                                    <td>${listing.priceDetails?.displayPrice || 'N/A'}</td>
+                                    <td>${listing.propertyDetails?.bedrooms || 'N/A'}</td>
+                                    <td>${listing.propertyDetails?.bathrooms || 'N/A'}</td>
+                                    <td>${listing.propertyDetails?.carspaces || 'N/A'}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                table.innerHTML = html;
             }
-        } catch (error) {
-            resultDiv.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
-            listingsDiv.style.display = 'none';
-        }
-    }
-    </script>
+
+            async function searchListings() {
+                const suburb = document.getElementById('suburb').value;
+                const searchDetails = document.getElementById('searchDetails');
+                const searchResult = document.getElementById('searchResult');
+                const saveButton = document.getElementById('saveButton');
+                
+                if (!suburb) {
+                    alert('Please enter a suburb name');
+                    return;
+                }
+                
+                try {
+                    searchDetails.innerHTML = 'Searching...';
+                    searchResult.style.display = 'block';
+                    saveButton.style.display = 'none';
+                    
+                    const response = await fetch(`/api/search/${encodeURIComponent(suburb)}`);
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        searchDetails.innerHTML = `<p class="error">❌ Error: ${data.error}</p>`;
+                        displayListings([]);
+                    } else {
+                        currentListings = data.listings;
+                        searchDetails.innerHTML = `
+                            <p class="success">✓ Found ${data.listings.length} listings in ${suburb}</p>
+                            <p>Click 'Save to Database' to store these listings</p>
+                        `;
+                        displayListings(data.listings);
+                        saveButton.style.display = 'block';
+                    }
+                } catch (error) {
+                    searchDetails.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+                    displayListings([]);
+                }
+            }
+
+            async function saveToDatabase() {
+                const saveDetails = document.getElementById('saveDetails');
+                const saveResult = document.getElementById('saveResult');
+                const saveButton = document.getElementById('saveButton');
+                
+                if (!currentListings) {
+                    alert('No listings to save');
+                    return;
+                }
+                
+                try {
+                    saveResult.style.display = 'block';
+                    saveDetails.innerHTML = 'Saving to database...';
+                    saveButton.disabled = true;
+                    
+                    const response = await fetch('/api/save-listings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ listings: currentListings })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        saveDetails.innerHTML = `<p class="error">❌ Error: ${data.error}</p>`;
+                    } else {
+                        saveDetails.innerHTML = `
+                            <p class="success">✓ Successfully saved ${data.saved_count} listings to database</p>
+                            ${data.csv_url ? `<p><a href="${data.csv_url}" download>Download CSV</a></p>` : ''}
+                        `;
+                    }
+                } catch (error) {
+                    saveDetails.innerHTML = `<p class="error">❌ Error: ${error.message}</p>`;
+                } finally {
+                    saveButton.disabled = false;
+                }
+            }
+        </script>
+    </div>
 </body>
 </html>

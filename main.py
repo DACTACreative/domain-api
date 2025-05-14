@@ -192,7 +192,7 @@ async def test_domain_api():
         logging.error(error_msg)
         return {"error": error_msg}
 
-@app.get("/search-listings/{suburb}")
+@app.get("/api/search/{suburb}")
 async def search_listings(suburb: str, pageSize: int = 100):
     try:
         # Get access token
@@ -201,10 +201,6 @@ async def search_listings(suburb: str, pageSize: int = 100):
             return {"error": "Failed to get access token"}
         
         api_key = access_token
-        
-        # Initialize variables
-        current_page = 1
-        all_listings = []
         
         # Prepare search parameters
         search_json = {
@@ -228,6 +224,7 @@ async def search_listings(suburb: str, pageSize: int = 100):
             "page": 1,
             "pageSize": pageSize
         }
+        
         # Make API request
         response = requests.post(
             f"{DOMAIN_API_URL}/listings/residential/_search",
@@ -245,6 +242,32 @@ async def search_listings(suburb: str, pageSize: int = 100):
         response_data = response.json()
         listings = response_data.get('data', [])
         logging.info(f"Found {len(listings)} listings for {suburb}")
+        
+        # Return listings without saving
+        return {
+            "success": True,
+            "message": f"Found {len(listings)} listings in {suburb}",
+            "suburb": suburb,
+            "listings": listings
+        }
+            
+    except Exception as e:
+        error_msg = f"Error: {str(e)}"
+        logging.error(error_msg)
+        return {"error": error_msg}
+
+@app.post("/api/save-listings")
+async def save_listings(request: Request):
+    try:
+        # Get listings from request body
+        data = await request.json()
+        listings = data.get('listings', [])
+        
+        if not listings:
+            return {"error": "No listings provided"}
+            
+        suburb = listings[0].get('propertyDetails', {}).get('suburb', 'unknown')
+        logging.info(f"Saving {len(listings)} listings for {suburb}")
         
         # Save each listing to database
         saved_count = 0
@@ -320,12 +343,11 @@ async def search_listings(suburb: str, pageSize: int = 100):
                 ]
                 writer.writerow(row)
         
-        # Return success response with counts
+        # Return success response
         return {
             "success": True,
-            "message": f"Found {len(listings)} listings, saved {saved_count} to database",
-            "total_listings": len(listings),
-            "saved_listings": saved_count,
+            "message": f"Successfully saved {saved_count} listings to database",
+            "saved_count": saved_count,
             "csv_url": f"/data/{filename}"
         }
             
