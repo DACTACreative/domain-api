@@ -16,7 +16,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
-        h1 {
+        h1, h2 {
             color: #333;
             margin-bottom: 20px;
         }
@@ -42,17 +42,52 @@
             padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
+            margin-right: 10px;
         }
         button:hover {
             background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: white;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        tr:hover {
+            background-color: #f5f5f5;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Database Viewer</h1>
-        <button onclick="testConnection()">Test Database Connection</button>
+        
+        <div>
+            <button onclick="testConnection()">Test Database Connection</button>
+            <button onclick="loadListings()">Load Listings</button>
+        </div>
+        
         <div id="status" style="display: none;"></div>
+        
+        <div id="listings-section" style="display: none;">
+            <h2>Listings</h2>
+            <div id="listings-table"></div>
+        </div>
     </div>
 
     <script>
@@ -69,6 +104,60 @@
                 statusDiv.className = 'status-box error';
                 statusDiv.textContent = 'Error connecting to database: ' + error.message;
                 statusDiv.style.display = 'block';
+            }
+        }
+
+        async function loadListings() {
+            const listingsSection = document.getElementById('listings-section');
+            const listingsTable = document.getElementById('listings-table');
+            listingsSection.style.display = 'block';
+            listingsTable.innerHTML = '<div class="loading">Loading listings...</div>';
+
+            try {
+                const response = await fetch('/api/listings');
+                const data = await response.json();
+                
+                if (data.success && data.listings) {
+                    const listings = data.listings;
+                    if (listings.length === 0) {
+                        listingsTable.innerHTML = '<div class="status-box">No listings found in the database.</div>';
+                        return;
+                    }
+
+                    // Create table
+                    let table = '<table>';
+                    
+                    // Headers
+                    table += '<tr>';
+                    const columns = ['id', 'price', 'suburb', 'state', 'postcode', 'bedrooms', 'bathrooms', 'parking_spaces', 'property_type', 'created_at'];
+                    columns.forEach(col => {
+                        table += `<th>${col.replace('_', ' ').toUpperCase()}</th>`;
+                    });
+                    table += '</tr>';
+
+                    // Rows
+                    listings.forEach(listing => {
+                        table += '<tr>';
+                        columns.forEach(col => {
+                            let value = listing[col] || '';
+                            if (col === 'price') {
+                                value = value ? `$${value.toLocaleString()}` : '';
+                            }
+                            if (col === 'created_at' && value) {
+                                value = new Date(value).toLocaleDateString();
+                            }
+                            table += `<td>${value}</td>`;
+                        });
+                        table += '</tr>';
+                    });
+
+                    table += '</table>';
+                    listingsTable.innerHTML = table;
+                } else {
+                    listingsTable.innerHTML = `<div class="status-box error">${data.message || 'Error loading listings'}</div>`;
+                }
+            } catch (error) {
+                listingsTable.innerHTML = `<div class="status-box error">Error loading listings: ${error.message}</div>`;
             }
         }
     </script>

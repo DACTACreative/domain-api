@@ -71,6 +71,32 @@ async def test_db_connection():
             'message': f'Failed to connect to database: {str(e)}'
         })
 
+@app.get('/api/listings')
+async def get_listings():
+    """Get all listings from database"""
+    try:
+        with engine.connect() as conn:
+            result = conn.execute(text("""
+                SELECT l.*, pd.*, a.* 
+                FROM listings l
+                LEFT JOIN property_details pd ON l.id = pd.listing_id
+                LEFT JOIN addresses a ON l.id = a.listing_id
+                ORDER BY l.created_at DESC
+                LIMIT 100
+            """))
+            columns = result.keys()
+            listings = [dict(zip(columns, row)) for row in result.fetchall()]
+            return JSONResponse({
+                'success': True,
+                'listings': listings
+            })
+    except Exception as e:
+        logging.error(f'Error fetching listings: {str(e)}')
+        return JSONResponse({
+            'success': False,
+            'message': f'Failed to fetch listings: {str(e)}'
+        })
+
 # Load environment variables
 load_dotenv()
 
