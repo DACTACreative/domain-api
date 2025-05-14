@@ -32,83 +32,87 @@ CREATE TABLE property_details (
     year_built INTEGER,
     energy_rating DECIMAL(3,1),
     property_features JSONB,   -- Array of features
-    floor_plans JSONB,        -- Array of URLs
-    images JSONB,             -- Array of URLs
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- Addresses (one-to-one with Listings)
-CREATE TABLE addresses (
-    id SERIAL PRIMARY KEY,
-    listing_id INTEGER UNIQUE REFERENCES listings(id) ON DELETE CASCADE,
-    street VARCHAR(255),
     street_number VARCHAR(50),
+    unit_number VARCHAR(50),
+    street VARCHAR(255),
     suburb VARCHAR(100),
-    state VARCHAR(50),
+    suburb_id INTEGER,
     postcode VARCHAR(10),
+    display_address TEXT,
     latitude DECIMAL(10,8),
     longitude DECIMAL(11,8),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Property Details
+CREATE TABLE property_details (
+    id SERIAL PRIMARY KEY,
+    listing_id BIGINT UNIQUE REFERENCES listings(id) ON DELETE CASCADE,
+    bathrooms DECIMAL(3,1),
+    bedrooms DECIMAL(3,1),
+    carspaces DECIMAL(3,1),
+    features JSONB,         -- Array of features
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Agencies
 CREATE TABLE agencies (
-    id SERIAL PRIMARY KEY,
-    domain_agency_id VARCHAR(50) UNIQUE,
+    id BIGINT PRIMARY KEY,  -- This is the Domain agency ID
     name VARCHAR(255),
-    logo_url VARCHAR(255),
-    website VARCHAR(255),
-    phone VARCHAR(50),
     email VARCHAR(255),
+    phone VARCHAR(50),
+    website TEXT,
+    logo_url TEXT,
+    preferred_color_hex VARCHAR(7),
+    banner_url TEXT,
     address TEXT,
+    suburb VARCHAR(100),
+    postcode VARCHAR(10),
+    state VARCHAR(50),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Agents
 CREATE TABLE agents (
-    id SERIAL PRIMARY KEY,
-    domain_agent_id VARCHAR(50) UNIQUE,
+    id BIGINT PRIMARY KEY,  -- This is the Domain agent ID
+    agency_id BIGINT REFERENCES agencies(id) ON DELETE CASCADE,
+    email VARCHAR(255),
     first_name VARCHAR(100),
     last_name VARCHAR(100),
-    email VARCHAR(255),
     mobile VARCHAR(50),
-    position VARCHAR(100),
-    profile_url VARCHAR(255),
-    image_url VARCHAR(255),
+    phone VARCHAR(50),
+    photo_url TEXT,
+    secondary_email VARCHAR(255),
+    facebook_url TEXT,
+    twitter_url TEXT,
+    agent_video TEXT,
+    profile_text TEXT,
+    google_plus_url TEXT,
+    personal_website_url TEXT,
+    linkedin_url TEXT,
+    profile_url TEXT,
+    contact_type_code INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Junction table for Listings and Agents (many-to-many)
+-- Junction table for Listings and Agents
 CREATE TABLE listing_agents (
-    listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
-    agent_id INTEGER REFERENCES agents(id) ON DELETE CASCADE,
-    is_primary_agent BOOLEAN DEFAULT FALSE,
+    listing_id BIGINT REFERENCES listings(id) ON DELETE CASCADE,
+    agent_id BIGINT REFERENCES agents(id) ON DELETE CASCADE,
     PRIMARY KEY (listing_id, agent_id)
 );
 
--- Sale History (one-to-many with Listings)
-CREATE TABLE sale_history (
-    id SERIAL PRIMARY KEY,
-    listing_id INTEGER REFERENCES listings(id) ON DELETE CASCADE,
-    sale_date TIMESTAMP,
-    sale_price DECIMAL(12,2),
-    sale_type VARCHAR(50),
-    source VARCHAR(100),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Create indexes for better performance
-CREATE INDEX idx_listings_domain_id ON listings(domain_listing_id);
-CREATE INDEX idx_listings_suburb ON addresses(suburb);
-CREATE INDEX idx_listings_postcode ON addresses(postcode);
-CREATE INDEX idx_listings_price ON listings(price);
-CREATE INDEX idx_agents_name ON agents(first_name, last_name);
+CREATE INDEX idx_listings_suburb ON address_details(suburb);
+CREATE INDEX idx_listings_postcode ON address_details(postcode);
 CREATE INDEX idx_agencies_name ON agencies(name);
+CREATE INDEX idx_agents_name ON agents(first_name, last_name);
+CREATE INDEX idx_listing_status ON listings(status);
+CREATE INDEX idx_listing_sale_mode ON listings(sale_mode);
 
 -- Create trigger to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -125,13 +129,13 @@ CREATE TRIGGER update_listings_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_property_details_updated_at
-    BEFORE UPDATE ON property_details
+CREATE TRIGGER update_address_details_updated_at
+    BEFORE UPDATE ON address_details
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_addresses_updated_at
-    BEFORE UPDATE ON addresses
+CREATE TRIGGER update_property_details_updated_at
+    BEFORE UPDATE ON property_details
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -142,10 +146,5 @@ CREATE TRIGGER update_agencies_updated_at
 
 CREATE TRIGGER update_agents_updated_at
     BEFORE UPDATE ON agents
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_sale_history_updated_at
-    BEFORE UPDATE ON sale_history
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
