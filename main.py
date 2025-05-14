@@ -1,13 +1,19 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse, FileResponse
+from sqlalchemy import text
 from pydantic import BaseModel
 import requests
 import os
 import logging
 import base64
 from dotenv import load_dotenv
+from db_operations import save_listing_to_db, get_listings_by_suburb
+from database import engine
+from pathlib import Path
+import csv
+from datetime import datetime
 
 # Configure logging
 logging.basicConfig(
@@ -38,6 +44,32 @@ async def home():
     with open('templates/home.html', 'r') as f:
         html_content = f.read()
     return HTMLResponse(content=html_content)
+
+@app.get('/database-viewer')
+async def database_viewer():
+    """Show database viewer page"""
+    with open('templates/database.html', 'r') as f:
+        html_content = f.read()
+    return HTMLResponse(content=html_content)
+
+@app.get('/test-db-connection')
+async def test_db_connection():
+    """Test database connection"""
+    try:
+        # Try to connect and execute a simple query
+        with engine.connect() as conn:
+            result = conn.execute(text('SELECT 1')).scalar()
+            if result == 1:
+                return JSONResponse({
+                    'success': True,
+                    'message': 'Successfully connected to database!'
+                })
+    except Exception as e:
+        logging.error(f'Database connection error: {str(e)}')
+        return JSONResponse({
+            'success': False,
+            'message': f'Failed to connect to database: {str(e)}'
+        })
 
 # Load environment variables
 load_dotenv()
@@ -134,17 +166,9 @@ async def test_domain_api():
         logging.error(error_msg)
         return {"error": error_msg}
 
-from datetime import datetime
-import csv
-import json
-from pathlib import Path
-from typing import Optional
-
 @app.get("/search-listings/{suburb}")
-async def search_listings(
-    suburb: str,
-    pageSize: int = 100  # Increased to get more records per page
-):
+async def search_listings(suburb: str, pageSize: int = 100):
+    """Search listings and save to database"""
     try:
         # Get access token
         access_token = get_domain_access_token()
@@ -181,11 +205,18 @@ async def search_listings(
             )
             response.raise_for_status()
             
-            data = response.json()
-            if not data:  # No more results
+            response_data = response.json()
+            if not response_data:  # No more results
                 break
                 
-            all_listings.extend(data)
+            all_listings.extend(response_data.get('data', []))
+
+            # Save listings to database
+            for listing in response_data.get('data', []):
+                try:
+                    save_listing_to_db(listing)
+                except Exception as e:
+                    logging.error(f"Error saving listing {listing.get('id')}: {str(e)}")
             
             # Update total pages based on results
             if current_page == 1:
